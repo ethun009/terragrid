@@ -5,10 +5,42 @@
 
 const ExportEngine = (() => {
 
+    // Helper to get critical SVG styles from document stylesheets
+    function getEmbeddedStyles() {
+        let css = '';
+        try {
+            for (const sheet of document.styleSheets) {
+                try {
+                    for (const rule of sheet.cssRules) {
+                        // Only include rules relevant to the SVG map elements
+                        if (rule.selectorText && (
+                            rule.selectorText.includes('contour-') ||
+                            rule.selectorText.includes('grid-line') ||
+                            rule.selectorText.includes('point-') ||
+                            rule.selectorText.includes('elev-label') ||
+                            rule.selectorText.includes('dem-')
+                        )) {
+                            css += rule.cssText + '\n';
+                        }
+                    }
+                } catch (e) { /* skip cross-origin sheets */ }
+            }
+        } catch (e) { }
+        return css;
+    }
+
     function exportPNG(svgId, filename = 'terragrid-export.png') {
         const svg = document.getElementById(svgId);
         if (!svg) { alert('No map to export. Please switch to a map view.'); return; }
-        const svgData = new XMLSerializer().serializeToString(svg);
+
+        // Clone and inject styles
+        const clone = svg.cloneNode(true);
+        const styles = getEmbeddedStyles();
+        const styleTag = document.createElementNS('http://www.w3.org/2000/svg', 'style');
+        styleTag.textContent = styles;
+        clone.insertBefore(styleTag, clone.firstChild);
+
+        const svgData = new XMLSerializer().serializeToString(clone);
         const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
         const url = URL.createObjectURL(svgBlob);
 
@@ -19,12 +51,24 @@ const ExportEngine = (() => {
             const vb = svg.viewBox.baseVal;
             const w = vb.width > 0 ? vb.width * scale : svg.clientWidth * scale;
             const h = vb.height > 0 ? vb.height * scale : svg.clientHeight * scale;
+
+            // Add extra space for footer
+            const footerH = 40 * scale;
             canvas.width = w;
-            canvas.height = h;
+            canvas.height = h + footerH;
+
             const ctx = canvas.getContext('2d');
             ctx.fillStyle = '#0d1117';
-            ctx.fillRect(0, 0, w, h);
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
             ctx.drawImage(img, 0, 0, w, h);
+
+            // Branding Footer
+            ctx.fillStyle = 'rgba(139, 148, 158, 0.8)';
+            ctx.font = `${10 * scale}px Inter, sans-serif`;
+            ctx.textAlign = 'right';
+            ctx.fillText('Made with ❤️ by Ethun', canvas.width - 20 * scale, canvas.height - 15 * scale);
+
             URL.revokeObjectURL(url);
 
             canvas.toBlob(blob => {
@@ -44,7 +88,14 @@ const ExportEngine = (() => {
         const svg = document.getElementById(svgId);
         if (!svg) { alert('No map to export.'); return; }
 
-        const svgData = new XMLSerializer().serializeToString(svg);
+        // Clone and inject styles
+        const clone = svg.cloneNode(true);
+        const styles = getEmbeddedStyles();
+        const styleTag = document.createElementNS('http://www.w3.org/2000/svg', 'style');
+        styleTag.textContent = styles;
+        clone.insertBefore(styleTag, clone.firstChild);
+
+        const svgData = new XMLSerializer().serializeToString(clone);
         const img = new Image();
         const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
         const url = URL.createObjectURL(svgBlob);
@@ -54,9 +105,11 @@ const ExportEngine = (() => {
             const pageW = doc.internal.pageSize.getWidth();
             const pageH = doc.internal.pageSize.getHeight();
 
-            // Header
+            // Background
             doc.setFillColor(13, 17, 23);
             doc.rect(0, 0, pageW, pageH, 'F');
+
+            // Header
             doc.setTextColor(230, 237, 243);
             doc.setFontSize(16);
             doc.text('TerraGrid Pro', 10, 12);
@@ -67,7 +120,7 @@ const ExportEngine = (() => {
 
             // Map image
             const canvas = document.createElement('canvas');
-            const scale = 2;
+            const scale = 2.5;
             const vb = svg.viewBox.baseVal;
             canvas.width = (vb.width > 0 ? vb.width : 800) * scale;
             canvas.height = (vb.height > 0 ? vb.height : 600) * scale;
@@ -77,15 +130,19 @@ const ExportEngine = (() => {
             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
             URL.revokeObjectURL(url);
 
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
             const imgW = pageW - 20;
-            const imgH = (pageH - 30);
+            const imgH = (pageH - 40);
             doc.addImage(dataUrl, 'JPEG', 10, 22, imgW, imgH);
 
-            // Footer
+            // Branding Footer
+            doc.setFontSize(10);
+            doc.setTextColor(139, 148, 158);
+            doc.text('Made with ❤️ by Ethun', pageW - 10, pageH - 10, { align: 'right' });
+
             doc.setFontSize(8);
             doc.setTextColor(72, 79, 88);
-            doc.text('Generated by TerraGrid Pro', pageW / 2, pageH - 5, { align: 'center' });
+            doc.text('Generated by TerraGrid Pro', 10, pageH - 10);
 
             doc.save(`${projectName.replace(/\s+/g, '_')}_contour.pdf`);
         };
@@ -107,8 +164,9 @@ const ExportEngine = (() => {
         dxf += '0\nSECTION\n2\nTABLES\n';
         dxf += '0\nTABLE\n2\nLAYER\n';
         dxf += '0\nLAYER\n2\nGRID_POINTS\n70\n0\n62\n7\n6\nCONTINUOUS\n';
-        dxf += '0\nLAYER\n2\nCONTOUR_MINOR\n70\n0\n62\n5\n6\nCONTINUOUS\n';
-        dxf += '0\nLAYER\n2\nCONTOUR_MAJOR\n70\n0\n62\n1\n6\nCONTINUOUS\n';
+        dxf += '0\nLAYER\n2\nCONTOUR_MINOR\n70\n0\n62\n150\n6\nCONTINUOUS\n'; // Light blue
+        dxf += '0\nLAYER\n2\nCONTOUR_MAJOR\n70\n0\n62\n5\n6\nCONTINUOUS\n';   // Blue
+        dxf += '0\nLAYER\n2\nBRANDING\n70\n0\n62\n7\n6\nCONTINUOUS\n';
         dxf += '0\nENDTABLE\n0\nENDSEC\n';
 
         // Entities
@@ -143,6 +201,11 @@ const ExportEngine = (() => {
             }
         }
 
+        // Branding entity
+        const footX = (cols - 1) * spacing;
+        const footY = -spacing * 0.5;
+        dxf += `0\nTEXT\n8\nBRANDING\n10\n${footX.toFixed(4)}\n20\n${footY.toFixed(4)}\n30\n0\n40\n${(spacing * 0.25).toFixed(4)}\n72\n2\n11\n${footX.toFixed(4)}\n21\n${footY.toFixed(4)}\n1\nMade with <3 by Ethun\n`;
+
         dxf += '0\nENDSEC\n0\nEOF\n';
 
         const blob = new Blob([dxf], { type: 'application/octet-stream' });
@@ -156,6 +219,7 @@ const ExportEngine = (() => {
         const data = {
             version: '1.0',
             exported: new Date().toISOString(),
+            createdBy: 'Ethun',
             project: {
                 name: appState.projectName,
                 rows: appState.rows,
@@ -190,7 +254,7 @@ const ExportEngine = (() => {
         const blob = new Blob([csvText], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
-        link.download = 'terragrid_elevation_data.csv';
+        link.download = 'terragrid_elevation_data_by_ethun.csv';
         link.click();
     }
 
