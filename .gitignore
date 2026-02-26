@@ -1,0 +1,10 @@
+# Standard Git ignore for web projects
+node_modules/
+.DS_Store
+Thumbs.db
+*.log
+.vscode/
+.idea/
+.gemini/
+/tmp/
+*.tmp

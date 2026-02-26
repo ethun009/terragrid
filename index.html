@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TerraGrid Pro — Professional Terrain Contour Mapping</title>
+    <meta name="description"
+        content="TerraGrid Pro: Professional web-based terrain contour mapping with Marching Squares, DEM visualization, slope analysis, and 3D WebGL viewer." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="css/styles.css" />
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+</head>
+
+<body>
+    <!-- SPLASH SCREEN -->
+    <div id="splash-screen">
+        <div class="wizard-bg">
+            <div class="wizard-grid-overlay"></div>
+            <div class="splash-content">
+                <h1 class="splash-brand">TerraGrid <span>Pro</span></h1>
+                <p class="splash-author">Made by ETHUN</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- WIZARD SCREEN -->
+    <div id="screen-wizard" class="screen active">
+        <div class="wizard-bg">
+            <div class="wizard-grid-overlay"></div>
+            <div class="wizard-center">
+                <div class="brand-logo">
+                    <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+                        <path d="M6 36 L14 18 L22 28 L30 10 L38 24 L44 20" stroke="var(--accent)" stroke-width="3"
+                            stroke-linecap="round" stroke-linejoin="round" fill="none" />
+                        <path d="M6 36 L14 18 L22 28 L30 10 L38 24 L44 20 L44 40 L6 40 Z" fill="var(--accent)"
+                            fill-opacity="0.15" />
+                    </svg>
+                    <span class="brand-name">TerraGrid <strong>Pro</strong></span>
+                </div>
+                <h1 class="wizard-title">New Terrain Project</h1>
+                <p class="wizard-subtitle">Configure your survey grid to get started</p>
+
+                <div class="wizard-card-scroll-wrapper">
+                    <div class="wizard-card" id="wizard-form">
+                        <div class="wizard-step" data-step="1">
+                            <div class="step-header">
+                                <div class="step-num">1</div>
+                                <div>
+                                    <div class="step-title">Project Identity</div>
+                                    <div class="step-desc">Name your terrain project</div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="proj-name">Project Name</label>
+                                <input type="text" id="proj-name" placeholder="e.g. Site Survey — Block A"
+                                    value="TerraGrid Survey" />
+                            </div>
+                        </div>
+
+                        <div class="wizard-step" data-step="2">
+                            <div class="step-header">
+                                <div class="step-num">2</div>
+                                <div>
+                                    <div class="step-title">Grid Dimensions</div>
+                                    <div class="step-desc">Define the survey grid size</div>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="grid-rows">Rows</label>
+                                    <input type="number" id="grid-rows" min="2" max="30" value="6" />
+                                </div>
+                                <div class="form-group">
+                                    <label for="grid-cols">Columns</label>
+                                    <input type="number" id="grid-cols" min="2" max="30" value="6" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="wizard-step" data-step="3">
+                            <div class="step-header">
+                                <div class="step-num">3</div>
+                                <div>
+                                    <div class="step-title">Spacing &amp; Units</div>
+                                    <div class="step-desc">Set real-world measurements</div>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="grid-spacing">Grid Spacing</label>
+                                    <input type="number" id="grid-spacing" min="0.1" step="0.1" value="10" />
+                                </div>
+                                <div class="form-group">
+                                    <label for="grid-units">Units</label>
+                                    <select id="grid-units">
+                                        <option value="m">Meters (m)</option>
+                                        <option value="ft">Feet (ft)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="wizard-step" data-step="4">
+                            <div class="step-header">
+                                <div class="step-num">4</div>
+                                <div>
+                                    <div class="step-title">Contour Settings</div>
+                                    <div class="step-desc">Configure contour intervals</div>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="contour-interval">Contour Interval</label>
+                                    <input type="number" id="contour-interval" min="0.1" step="0.1" value="1" />
+                                </div>
+                                <div class="form-group">
+                                    <label for="major-interval-mult">Major Every (n minor)</label>
+                                    <input type="number" id="major-interval-mult" min="1" max="20" value="5" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="wizard-actions">
+                            <button id="btn-load-sample" class="btn-secondary">Load Sample Data</button>
+                            <button id="btn-create-project" class="btn-primary">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <polyline points="9 18 15 12 9 6" />
+                                </svg>
+                                Create Project
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN APPLICATION SCREEN -->
+    <div id="screen-app" class="screen">
+        <!-- Top Bar -->
+        <header class="topbar">
+            <!-- Mobile Row 1: hamburger + brand + actions -->
+            <div class="topbar-row1">
+                <button id="sidebar-toggle" class="mobile-toggle-btn" title="Toggle Sidebar">
+                    <i class='bx bx-menu'></i>
+                </button>
+                <div class="topbar-left">
+                    <button id="btn-back-wizard" class="icon-btn" title="Back to Projects">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <polyline points="15 18 9 12 15 6" />
+                        </svg>
+                    </button>
+                    <div class="brand-logo compact">
+                        <svg width="28" height="28" viewBox="0 0 48 48" fill="none">
+                            <path d="M6 36 L14 18 L22 28 L30 10 L38 24 L44 20" stroke="var(--accent)" stroke-width="3"
+                                stroke-linecap="round" stroke-linejoin="round" fill="none" />
+                            <path d="M6 36 L14 18 L22 28 L30 10 L38 24 L44 20 L44 40 L6 40 Z" fill="var(--accent)"
+                                fill-opacity="0.15" />
+                        </svg>
+                        <span id="topbar-project-name" class="brand-name">TerraGrid Pro</span>
+                    </div>
+                </div>
+                <div class="topbar-right">
+                    <button id="btn-import-csv" class="icon-btn" title="Import CSV">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                            <polyline points="17 8 12 3 7 8" />
+                            <line x1="12" y1="3" x2="12" y2="15" />
+                        </svg>
+                    </button>
+                    <button id="btn-export-menu" class="icon-btn" title="Export">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                            <polyline points="7 10 12 15 17 10" />
+                            <line x1="12" y1="15" x2="12" y2="3" />
+                        </svg>
+                    </button>
+                    <div id="export-dropdown" class="dropdown hidden">
+                        <button class="dropdown-item" data-export="png">🖼 Export PNG</button>
+                        <button class="dropdown-item" data-export="pdf">📄 Export PDF</button>
+                        <button class="dropdown-item" data-export="dxf">📐 Export DXF</button>
+                        <button class="dropdown-item" data-export="json">💾 Save Project (JSON)</button>
+                        <button class="dropdown-item" data-export="csv">📊 Export CSV</button>
+                    </div>
+                    <input type="file" id="csv-file-input" accept=".csv,.json" class="hidden" />
+                </div>
+            </div>
+            <!-- Mobile Row 2: tab strip -->
+            <div class="topbar-row2">
+                <nav class="topbar-tabs">
+                    <button class="tab-btn active" data-view="spreadsheet" id="tab-spreadsheet">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <rect x="3" y="3" width="7" height="7" />
+                            <rect x="14" y="3" width="7" height="7" />
+                            <rect x="14" y="14" width="7" height="7" />
+                            <rect x="3" y="14" width="7" height="7" />
+                        </svg>
+                        Data Input
+                    </button>
+                    <button class="tab-btn" data-view="contour" id="tab-contour">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <circle cx="12" cy="12" r="9" />
+                            <circle cx="12" cy="12" r="5" />
+                            <circle cx="12" cy="12" r="1" />
+                        </svg>
+                        Contour
+                    </button>
+                    <button class="tab-btn" data-view="dem" id="tab-dem">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <defs>
+                                <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
+                                    <stop offset="0%" stop-color="#3b82f6" />
+                                    <stop offset="100%" stop-color="#22c55e" />
+                                </linearGradient>
+                            </defs>
+                            <rect x="3" y="3" width="18" height="18" rx="2" fill="url(#g1)" stroke="currentColor" />
+                        </svg>
+                        DEM
+                    </button>
+                    <button class="tab-btn" data-view="analysis" id="tab-analysis">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+                        </svg>
+                        Analysis
+                    </button>
+                    <button class="tab-btn" data-view="viewer3d" id="tab-viewer3d">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <polyline points="12 2 2 7 12 12 22 7 12 2" />
+                            <polyline points="2 17 12 22 22 17" />
+                            <polyline points="2 12 12 17 22 12" />
+                        </svg>
+                        3D View
+                    </button>
+                </nav>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <div class="app-body">
+            <!-- Sidebar backdrop (mobile overlay) -->
+            <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+            <!-- SIDEBAR -->
+            <aside class="sidebar" id="sidebar">
+                <div class="sidebar-section" id="sidebar-grid-controls">
+                    <div class="sidebar-title">Display</div>
+                    <label class="toggle-row">
+                        <span>Grid Lines</span>
+                        <div class="toggle" id="toggle-grid">
+                            <div class="toggle-knob"></div>
+                        </div>
+                    </label>
+                    <label class="toggle-row">
+                        <span>Point Labels</span>
+                        <div class="toggle active" id="toggle-labels">
+                            <div class="toggle-knob"></div>
+                        </div>
+                    </label>
+                    <label class="toggle-row">
+                        <span>Elevation Values</span>
+                        <div class="toggle active" id="toggle-elev">
+                            <div class="toggle-knob"></div>
+                        </div>
+                    </label>
+                    <label class="toggle-row">
+                        <span>Contour Lines</span>
+                        <div class="toggle active" id="toggle-contours">
+                            <div class="toggle-knob"></div>
+                        </div>
+                    </label>
+                    <label class="toggle-row">
+                        <span>Contour Labels</span>
+                        <div class="toggle active" id="toggle-contour-labels">
+                            <div class="toggle-knob"></div>
+                        </div>
+                    </label>
+                    <label class="toggle-row">
+                        <span>Color Fill (DEM)</span>
+                        <div class="toggle" id="toggle-dem-fill">
+                            <div class="toggle-knob"></div>
+                        </div>
+                    </label>
+                </div>
+
+                <div class="sidebar-section" id="sidebar-contour-controls">
+                    <div class="sidebar-title">Contour Settings</div>
+                    <div class="form-group small">
+                        <label>Interval</label>
+                        <div class="input-unit-row">
+                            <input type="number" id="sb-contour-interval" min="0.1" step="0.1" value="1" />
+                            <span class="unit-label" id="sb-unit-label">m</span>
+                        </div>
+                    </div>
+                    <div class="form-group small">
+                        <label>Major Every</label>
+                        <input type="number" id="sb-major-mult" min="1" max="20" value="5" />
+                    </div>
+                    <div class="form-group small">
+                        <label>Smoothing</label>
+                        <input type="range" id="sb-smoothing" min="0" max="1" step="0.1" value="0.5"
+                            class="range-input" />
+                    </div>
+                    <div class="form-group small">
+                        <label>Vertical Exaggeration (3D)</label>
+                        <input type="range" id="sb-vert-exag" min="1" max="10" step="0.5" value="2"
+                            class="range-input" />
+                        <span class="range-value" id="sb-vert-exag-val">2×</span>
+                    </div>
+                </div>
+
+                <div class="sidebar-section" id="sidebar-color-ramp">
+                    <div class="sidebar-title">Color Ramp</div>
+                    <div class="color-ramp-options">
+                        <button class="ramp-btn active" data-ramp="terrain" title="Terrain">Terrain</button>
+                        <button class="ramp-btn" data-ramp="viridis" title="Viridis">Viridis</button>
+                        <button class="ramp-btn" data-ramp="plasma" title="Plasma">Plasma</button>
+                        <button class="ramp-btn" data-ramp="grayscale" title="Grayscale">Gray</button>
+                        <button class="ramp-btn" data-ramp="rdbu" title="RdBu">RdBu</button>
+                    </div>
+                </div>
+
+                <div class="sidebar-section" id="sidebar-stats">
+                    <div class="sidebar-title">Terrain Stats</div>
+                    <div class="stat-row"><span>Min Elevation</span><strong id="stat-min">—</strong></div>
+                    <div class="stat-row"><span>Max Elevation</span><strong id="stat-max">—</strong></div>
+                    <div class="stat-row"><span>Mean Elevation</span><strong id="stat-mean">—</strong></div>
+                    <div class="stat-row"><span>Relief</span><strong id="stat-relief">—</strong></div>
+                    <div class="stat-row"><span>Data Points</span><strong id="stat-points">—</strong></div>
+                </div>
+            </aside>
+
+
+            <!-- CONTENT PANELS -->
+            <main class="main-panel">
+
+                <!-- SPREADSHEET VIEW -->
+                <div class="view-panel active" id="view-spreadsheet">
+                    <div class="panel-toolbar">
+                        <span class="panel-title">Elevation Data Input</span>
+                        <div class="toolbar-actions">
+                            <button class="tool-btn" id="btn-fill-demo">Fill Demo Data</button>
+                            <button class="tool-btn" id="btn-clear-data">Clear All</button>
+                        </div>
+                    </div>
+                    <div class="spreadsheet-container" id="spreadsheet-container">
+                        <div id="spreadsheet-wrapper"></div>
+                    </div>
+                </div>
+
+                <!-- CONTOUR MAP VIEW -->
+                <div class="view-panel" id="view-contour">
+                    <div class="panel-toolbar">
+                        <span class="panel-title">Contour Map</span>
+                        <div class="toolbar-actions">
+                            <button class="tool-btn" id="btn-zoom-fit">Fit View</button>
+                            <button class="tool-btn" id="btn-zoom-in">+ Zoom</button>
+                            <button class="tool-btn" id="btn-zoom-out">− Zoom</button>
+                            <button class="tool-btn" id="btn-regen-contour">Regenerate</button>
+                        </div>
+                    </div>
+                    <div class="map-container" id="contour-map-container">
+                        <svg id="contour-svg" class="map-svg"></svg>
+                        <div class="map-legend" id="dem-legend"></div>
+                    </div>
+                </div>
+
+                <!-- DEM VIEW -->
+                <div class="view-panel" id="view-dem">
+                    <div class="panel-toolbar">
+                        <span class="panel-title">DEM — Color Elevation Model</span>
+                        <div class="toolbar-actions">
+                            <button class="tool-btn" id="btn-dem-fit">Fit View</button>
+                        </div>
+                    </div>
+                    <div class="map-container" id="dem-map-container">
+                        <svg id="dem-svg" class="map-svg"></svg>
+                        <div class="dem-legend-bar" id="dem-legend-bar"></div>
+                        <div class="dem-floating-bar" id="dem-floating-bar">
+                            <svg width="10" height="10" viewBox="0 0 10 10" style="flex-shrink:0">
+                                <circle cx="5" cy="5" r="4" fill="var(--accent)" opacity="0.8" />
+                            </svg>
+                            <span id="dem-ramp-label">Terrain</span>
+                            &nbsp;·&nbsp; Pinch to zoom · Drag to pan
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ANALYSIS VIEW -->
+                <div class="view-panel" id="view-analysis">
+                    <div class="panel-toolbar">
+                        <span class="panel-title">Terrain Analysis</span>
+                        <div class="toolbar-actions">
+                            <button class="tool-btn active-tool" id="btn-analysis-slope" data-analysis="slope">Slope
+                                Map</button>
+                            <button class="tool-btn" id="btn-analysis-flow" data-analysis="flow">Flow Dir</button>
+                            <button class="tool-btn" id="btn-analysis-cutfill" data-analysis="cutfill">Cut &amp;
+                                Fill</button>
+                        </div>
+                    </div>
+                    <div class="analysis-layout">
+                        <div class="map-container" id="analysis-map-container">
+                            <svg id="analysis-svg" class="map-svg"></svg>
+                        </div>
+                        <div class="analysis-panel" id="analysis-info-panel">
+                            <!-- Drag handle for mobile bottom-sheet -->
+                            <div class="analysis-panel-handle" id="analysis-panel-handle"></div>
+                            <div class="analysis-card" id="slope-card">
+                                <h3>Slope Analysis</h3>
+                                <div class="stat-row"><span>Max Slope</span><strong id="slope-max">—</strong></div>
+                                <div class="stat-row"><span>Mean Slope</span><strong id="slope-mean">—</strong>
+                                </div>
+                                <div class="slope-legend" id="slope-legend"></div>
+                            </div>
+                            <div class="analysis-card hidden" id="flow-card">
+                                <h3>Flow Direction</h3>
+                                <p class="card-sub">Arrows indicate water flow direction based on steepest descent.
+                                </p>
+                            </div>
+                            <div class="analysis-card hidden" id="cutfill-card">
+                                <h3>Cut &amp; Fill Volumes</h3>
+                                <div class="form-group small">
+                                    <label>Reference Datum</label>
+                                    <div class="input-unit-row">
+                                        <input type="number" id="datum-elev" step="0.1" value="0" />
+                                        <span class="unit-label" id="datum-unit-label">m</span>
+                                    </div>
+                                </div>
+                                <button class="btn-primary small" id="btn-calc-cutfill">Calculate</button>
+                                <div class="cutfill-results" id="cutfill-results"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3D VIEWER VIEW -->
+                <div class="view-panel" id="view-viewer3d">
+                    <div class="panel-toolbar">
+                        <span class="panel-title">3D Terrain Viewer</span>
+                        <div class="toolbar-actions">
+                            <button class="tool-btn" id="btn-3d-reset">Reset Camera</button>
+                            <button class="tool-btn" id="btn-3d-wireframe">Wireframe</button>
+                        </div>
+                    </div>
+                    <div class="viewer3d-container" id="viewer3d-container">
+                        <canvas id="terrain-canvas"></canvas>
+                        <div id="v3d-label-container" class="v3d-label-container"></div>
+                        <div class="viewer3d-overlay">
+                            <span>
+                                <span class="pc-hint">🖱 Drag to rotate &nbsp;|&nbsp; Scroll to zoom &nbsp;|&nbsp;
+                                    Right-drag to pan</span>
+                                <span class="touch-hint">☝ Drag to rotate &nbsp;|&nbsp; Pinch to zoom &nbsp;|&nbsp;
+                                    2-finger drag to pan</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+            </main>
+        </div>
+
+        <footer class="app-footer">
+            <!-- Banner: Brand + CTAs -->
+            <div class="footer-banner">
+                <div class="footer-brand-block">
+                    <div class="footer-brand-name">TerraGrid <strong>Pro</strong></div>
+                    <div class="footer-brand-tagline">Professional Terrain Mapping Tool</div>
+                </div>
+                <div class="footer-cta-group">
+                    <a href="https://ethun009.vercel.app/" target="_blank" class="footer-btn footer-btn-outline">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
+                            <polyline points="15 3 21 3 21 9" />
+                            <line x1="10" y1="14" x2="21" y2="3" />
+                        </svg>
+                        Visit Portfolio
+                    </a>
+                    <a href="https://topupethun.vercel.app/" target="_blank" class="footer-btn footer-btn-diamond">
+                        Get Diamond
+                    </a>
+                </div>
+            </div>
+
+            <!-- Info: Description + Links -->
+            <div class="footer-info">
+                <p class="footer-desc">
+                    TerraGrid Pro is a web-based terrain contour mapping tool featuring Marching Squares algorithms, DEM
+                    visualization, slope &amp; flow analysis, and an interactive 3D WebGL viewer.
+                </p>
+                <div class="footer-links-col">
+                    <h4>Connect</h4>
+                    <a href="https://discord.gg/eEgPBA6gVQ" target="_blank" class="footer-link">
+                        <i class="bx bxl-discord-alt"></i> Discord Community
+                    </a>
+                    <a href="https://www.youtube.com/@ethun009" target="_blank" class="footer-link">
+                        <i class="bx bxl-youtube"></i> YouTube Channel
+                    </a>
+                    <a href="https://www.facebook.com/ethun009/" target="_blank" class="footer-link">
+                        <i class="bx bxl-facebook"></i> Facebook Page
+                    </a>
+                </div>
+                <!-- <div class="footer-links-col">
+                    <h4>Tools</h4>
+                    <span class="footer-link"><i class="bx bx-grid-alt"></i> Contour Mapping</span>
+                    <span class="footer-link"><i class="bx bx-layer"></i> DEM Color Model</span>
+                    <span class="footer-link"><i class="bx bx-cube-alt"></i> 3D Viewer</span>
+                    <span class="footer-link"><i class="bx bx-bar-chart-alt-2"></i> Slope Analysis</span>
+                </div> -->
+            </div>
+
+            <!-- Bottom bar: copyright + socials -->
+            <div class="footer-bottom">
+                <span class="footer-copy">Made with ❤ by <strong>Ethun</strong> &nbsp;·&nbsp; TerraGrid Pro &copy;
+                    2025</span>
+                <div class="footer-socials">
+                    <a href="https://discord.gg/eEgPBA6gVQ" target="_blank" class="footer-social-btn" title="Discord">
+                        <i class="bx bxl-discord-alt"></i>
+                    </a>
+                    <a href="https://www.youtube.com/@ethun009" target="_blank" class="footer-social-btn"
+                        title="YouTube">
+                        <i class="bx bxl-youtube"></i>
+                    </a>
+                    <a href="https://www.facebook.com/ethun009/" target="_blank" class="footer-social-btn"
+                        title="Facebook">
+                        <i class="bx bxl-facebook"></i>
+                    </a>
+                    <a href="https://ethun009.vercel.app/" target="_blank" class="footer-social-btn" title="Portfolio">
+                        <i class="bx bx-globe"></i>
+                    </a>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Three.js from CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- jsPDF from CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <!-- App Modules -->
+    <script src="js/utils.js"></script>
+    <script src="js/contour.js"></script>
+    <script src="js/grid.js"></script>
+    <script src="js/spreadsheet.js"></script>
+    <script src="js/analysis.js"></script>
+    <script src="js/dem.js"></script>
+    <script src="js/viewer3d.js"></script>
+    <script src="js/export.js"></script>
+    <script src="js/app.js"></script>
+</body>
+
+</html>
