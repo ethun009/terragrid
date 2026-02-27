@@ -19,6 +19,9 @@
         majorMultiplier: 5,
         smoothing: 0.5,
         vertExag: 2,
+        v3dSmoothing: 0,
+        v3dColorMode: 'terrain',
+        v3dStaticColor: '#3b82f6',
         ramp: 'terrain',
         currentView: 'spreadsheet',
         toggles: {
@@ -160,7 +163,7 @@
         else if (AppState.currentView === 'dem') renderDEMView();
         else if (AppState.currentView === 'analysis') renderAnalysisView();
         else if (AppState.currentView === 'viewer3d') {
-            Viewer3D.buildTerrain(AppState.grid, AppState.rows, AppState.cols, AppState.spacing, AppState.vertExag);
+            refresh3D();
         }
     }
 
@@ -216,13 +219,18 @@
             renderContourView();
         });
 
-        document.getElementById('btn-dem-fit').addEventListener('click', renderDEMView);
+        document.getElementById('btn-dem-fit').addEventListener('click', () => {
+            DEMRenderer.fitToView(AppState.rows, AppState.cols, AppState.cellSize);
+        });
 
         document.getElementById('btn-3d-reset').addEventListener('click', () => Viewer3D.resetCamera());
         document.getElementById('btn-3d-wireframe').addEventListener('click', () => {
             const btn = document.getElementById('btn-3d-wireframe');
             Viewer3D.toggleWireframe();
             btn.classList.toggle('active-tool');
+        });
+        document.getElementById('btn-3d-water').addEventListener('click', () => {
+            Viewer3D.toggleWaterMode();
         });
 
         // CSV import
@@ -254,12 +262,18 @@
                 GridRenderer.fitToView(AppState.rows, AppState.cols, AppState.cellSize);
             }, 50);
         } else if (view === 'dem') {
-            setTimeout(renderDEMView, 50);
+            setTimeout(() => {
+                renderDEMView();
+                DEMRenderer.fitToView(AppState.rows, AppState.cols, AppState.cellSize);
+            }, 50);
         } else if (view === 'analysis') {
-            setTimeout(renderAnalysisView, 50);
+            setTimeout(() => {
+                renderAnalysisView();
+                AnalysisEngine.fitToView(AppState.rows, AppState.cols, AppState.cellSize);
+            }, 50);
         } else if (view === 'viewer3d') {
             Viewer3D.setup();
-            Viewer3D.buildTerrain(AppState.grid, AppState.rows, AppState.cols, AppState.spacing, AppState.vertExag);
+            refresh3D();
             Viewer3D.updateLabelVisibility(AppState.toggles);
             Viewer3D.startRender();
         }
@@ -291,6 +305,15 @@
 
         // Fix viewBox for zoom/pan to work nicely
         fitContourViewBox();
+    }
+
+    function refresh3D() {
+        if (AppState.grid) {
+            Viewer3D.buildTerrain(
+                AppState.grid, AppState.rows, AppState.cols, AppState.spacing,
+                AppState.vertExag, AppState.v3dSmoothing, AppState.v3dColorMode, AppState.v3dStaticColor
+            );
+        }
     }
 
     function fitContourViewBox() {
@@ -417,9 +440,29 @@
         vertExagSlider.addEventListener('input', (e) => {
             AppState.vertExag = parseFloat(e.target.value);
             vertExagVal.textContent = AppState.vertExag + '×';
-            if (AppState.currentView === 'viewer3d') {
-                Viewer3D.buildTerrain(AppState.grid, AppState.rows, AppState.cols, AppState.spacing, AppState.vertExag);
-            }
+            if (AppState.currentView === 'viewer3d') refresh3D();
+        });
+
+        // 3D Smoothing
+        const smoothVal = document.getElementById('sb-3d-smoothing-val');
+        document.getElementById('sb-3d-smoothing').addEventListener('input', (e) => {
+            const v = parseInt(e.target.value);
+            AppState.v3dSmoothing = v;
+            smoothVal.textContent = v === 0 ? 'Off' : v;
+            if (AppState.currentView === 'viewer3d') refresh3D();
+        });
+
+        // 3D Color Mode
+        const staticGroup = document.getElementById('static-color-group');
+        document.getElementById('sb-3d-color-mode').addEventListener('change', (e) => {
+            AppState.v3dColorMode = e.target.value;
+            staticGroup.classList.toggle('hidden', e.target.value !== 'static');
+            if (AppState.currentView === 'viewer3d') refresh3D();
+        });
+
+        document.getElementById('sb-3d-static-color').addEventListener('input', (e) => {
+            AppState.v3dStaticColor = e.target.value;
+            if (AppState.currentView === 'viewer3d') refresh3D();
         });
 
         // Color ramp

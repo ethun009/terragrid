@@ -313,33 +313,53 @@
                         <input type="range" id="sb-smoothing" min="0" max="1" step="0.1" value="0.5"
                             class="range-input" />
                     </div>
-                    <div class="form-group small">
-                        <label>Vertical Exaggeration (3D)</label>
-                        <input type="range" id="sb-vert-exag" min="1" max="10" step="0.5" value="2"
-                            class="range-input" />
-                        <span class="range-value" id="sb-vert-exag-val">2×</span>
+                    <div class="sidebar-section" id="sidebar-3d-controls">
+                        <div class="sidebar-title">3D View Settings</div>
+                        <div class="form-group small">
+                            <label>Surface Smoothing</label>
+                            <input type="range" id="sb-3d-smoothing" min="0" max="10" step="1" value="0"
+                                class="range-input" />
+                            <span class="range-value" id="sb-3d-smoothing-val">Off</span>
+                        </div>
+                        <div class="form-group small">
+                            <label>Surface Coloring</label>
+                            <select id="sb-3d-color-mode" class="select-input">
+                                <option value="terrain">Elevation Ramp</option>
+                                <option value="slope">Slope-Based</option>
+                                <option value="static">Static Color</option>
+                            </select>
+                        </div>
+                        <div id="static-color-group" class="form-group small hidden">
+                            <label>Pick Color</label>
+                            <input type="color" id="sb-3d-static-color" value="#3b82f6" class="color-picker-input" />
+                        </div>
+                        <div class="form-group small">
+                            <label>Vertical Exaggeration</label>
+                            <input type="range" id="sb-vert-exag" min="1" max="10" step="0.5" value="2"
+                                class="range-input" />
+                            <span class="range-value" id="sb-vert-exag-val">2×</span>
+                        </div>
                     </div>
-                </div>
 
-                <div class="sidebar-section" id="sidebar-color-ramp">
-                    <div class="sidebar-title">Color Ramp</div>
-                    <div class="color-ramp-options">
-                        <button class="ramp-btn active" data-ramp="terrain" title="Terrain">Terrain</button>
-                        <button class="ramp-btn" data-ramp="viridis" title="Viridis">Viridis</button>
-                        <button class="ramp-btn" data-ramp="plasma" title="Plasma">Plasma</button>
-                        <button class="ramp-btn" data-ramp="grayscale" title="Grayscale">Gray</button>
-                        <button class="ramp-btn" data-ramp="rdbu" title="RdBu">RdBu</button>
+                    <div class="sidebar-section" id="sidebar-color-ramp">
+                        <div class="sidebar-title">Color Ramp</div>
+                        <div class="color-ramp-options">
+                            <button class="ramp-btn active" data-ramp="terrain" title="Terrain">Terrain</button>
+                            <button class="ramp-btn" data-ramp="viridis" title="Viridis">Viridis</button>
+                            <button class="ramp-btn" data-ramp="plasma" title="Plasma">Plasma</button>
+                            <button class="ramp-btn" data-ramp="grayscale" title="Grayscale">Gray</button>
+                            <button class="ramp-btn" data-ramp="rdbu" title="RdBu">RdBu</button>
+                        </div>
                     </div>
-                </div>
 
-                <div class="sidebar-section" id="sidebar-stats">
-                    <div class="sidebar-title">Terrain Stats</div>
-                    <div class="stat-row"><span>Min Elevation</span><strong id="stat-min">—</strong></div>
-                    <div class="stat-row"><span>Max Elevation</span><strong id="stat-max">—</strong></div>
-                    <div class="stat-row"><span>Mean Elevation</span><strong id="stat-mean">—</strong></div>
-                    <div class="stat-row"><span>Relief</span><strong id="stat-relief">—</strong></div>
-                    <div class="stat-row"><span>Data Points</span><strong id="stat-points">—</strong></div>
-                </div>
+                    <div class="sidebar-section" id="sidebar-stats">
+                        <div class="sidebar-title">Terrain Stats</div>
+                        <div class="stat-row"><span>Min Elevation</span><strong id="stat-min">—</strong></div>
+                        <div class="stat-row"><span>Max Elevation</span><strong id="stat-max">—</strong></div>
+                        <div class="stat-row"><span>Mean Elevation</span><strong id="stat-mean">—</strong></div>
+                        <div class="stat-row"><span>Relief</span><strong id="stat-relief">—</strong></div>
+                        <div class="stat-row"><span>Data Points</span><strong id="stat-points">—</strong></div>
+                    </div>
             </aside>
 
 
@@ -450,6 +470,9 @@
                     <div class="panel-toolbar">
                         <span class="panel-title">3D Terrain Viewer</span>
                         <div class="toolbar-actions">
+                            <button class="tool-btn" id="btn-3d-water" title="Drop Water Interaction">
+                                <i class='bx bx-droplet'></i> Water
+                            </button>
                             <button class="tool-btn" id="btn-3d-reset">Reset Camera</button>
                             <button class="tool-btn" id="btn-3d-wireframe">Wireframe</button>
                         </div>

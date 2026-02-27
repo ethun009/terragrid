@@ -116,8 +116,130 @@ const Utils = (() => {
         return isNaN(n) ? null : n;
     }
 
+    // Create a pan/zoom controller for an SVG element
+    function createPanZoom(svgEl, onTransform) {
+        const transform = { x: 0, y: 0, scale: 1 };
+        let isDragging = false;
+        let dragStart = { x: 0, y: 0, tx: 0, ty: 0 };
+
+        // Wheel zoom
+        svgEl.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const rect = svgEl.getBoundingClientRect();
+            const mx = e.clientX - rect.left;
+            const my = e.clientY - rect.top;
+            const factor = e.deltaY < 0 ? 1.12 : 1 / 1.12;
+            const newScale = clamp(transform.scale * factor, 0.05, 40);
+            transform.x = mx - (mx - transform.x) * (newScale / transform.scale);
+            transform.y = my - (my - transform.y) * (newScale / transform.scale);
+            transform.scale = newScale;
+            onTransform(transform);
+        }, { passive: false });
+
+        // Pan
+        svgEl.addEventListener('mousedown', (e) => {
+            if (e.button !== 0) return;
+            isDragging = true;
+            dragStart = { x: e.clientX, y: e.clientY, tx: transform.x, ty: transform.y };
+            svgEl.style.cursor = 'grabbing';
+        });
+
+        const onMouseMove = (e) => {
+            if (!isDragging) return;
+            transform.x = dragStart.tx + (e.clientX - dragStart.x);
+            transform.y = dragStart.ty + (e.clientY - dragStart.y);
+            onTransform(transform);
+        };
+
+        const onMouseUp = () => {
+            isDragging = false;
+            svgEl.style.cursor = 'grab';
+        };
+
+        window.addEventListener('mousemove', onMouseMove);
+        window.addEventListener('mouseup', onMouseUp);
+
+        // Touch support
+        let lastTouch = null;
+        let lastTouchDist = 0;
+
+        svgEl.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 1) {
+                lastTouch = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+                lastTouchDist = 0;
+                e.preventDefault();
+            } else if (e.touches.length === 2) {
+                const dx = e.touches[1].clientX - e.touches[0].clientX;
+                const dy = e.touches[1].clientY - e.touches[0].clientY;
+                lastTouchDist = Math.sqrt(dx * dx + dy * dy);
+                lastTouch = {
+                    x: (e.touches[0].clientX + e.touches[1].clientX) / 2,
+                    y: (e.touches[0].clientY + e.touches[1].clientY) / 2
+                };
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        svgEl.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            if (e.touches.length === 1 && lastTouch) {
+                const dx = e.touches[0].clientX - lastTouch.x;
+                const dy = e.touches[0].clientY - lastTouch.y;
+                transform.x += dx;
+                transform.y += dy;
+                lastTouch = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+                onTransform(transform);
+            } else if (e.touches.length === 2) {
+                const dx = e.touches[1].clientX - e.touches[0].clientX;
+                const dy = e.touches[1].clientY - e.touches[0].clientY;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+                const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+
+                if (lastTouchDist > 0) {
+                    const factor = dist / lastTouchDist;
+                    const rect = svgEl.getBoundingClientRect();
+                    const mx = midX - rect.left;
+                    const my = midY - rect.top;
+                    const newScale = clamp(transform.scale * factor, 0.05, 40);
+                    transform.x = mx - (mx - transform.x) * (newScale / transform.scale);
+                    transform.y = my - (my - transform.y) * (newScale / transform.scale);
+                    transform.scale = newScale;
+                }
+                if (lastTouch) {
+                    transform.x += midX - lastTouch.x;
+                    transform.y += midY - lastTouch.y;
+                }
+                lastTouchDist = dist;
+                lastTouch = { x: midX, y: midY };
+                onTransform(transform);
+            }
+        }, { passive: false });
+
+        svgEl.addEventListener('touchend', (e) => {
+            if (e.touches.length === 1) {
+                lastTouch = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+                lastTouchDist = 0;
+            } else {
+                lastTouch = null;
+                lastTouchDist = 0;
+            }
+        }, { passive: true });
+
+        return {
+            get transform() { return transform; },
+            setTransform(x, y, scale) {
+                transform.x = x;
+                transform.y = y;
+                transform.scale = scale;
+                onTransform(transform);
+            }
+        };
+    }
+
     return {
         colLabel, pointId, bilinearInterp, clamp, lerp, lerpColor,
-        sampleRamp, getRamp, RAMPS, elevStats, round, svgEl, parseElev, makeCanvasGradient
+        sampleRamp, getRamp, RAMPS, elevStats, round, svgEl, parseElev, makeCanvasGradient,
+        createPanZoom
     };
 })();

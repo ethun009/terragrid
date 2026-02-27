@@ -5,27 +5,60 @@
 
 const DEMRenderer = (() => {
     let svgId = null, containerId = null;
+    let rootG = null;
+    let pz = null;
 
     function init(sId, cId) {
         svgId = sId;
         containerId = cId;
+        const svgEl = document.getElementById(svgId);
+        if (!svgEl) return;
+
+        svgEl.innerHTML = '';
+        rootG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        rootG.setAttribute('id', 'dem-root-g');
+        svgEl.appendChild(rootG);
+
+        pz = Utils.createPanZoom(svgEl, applyTransform);
+    }
+
+    function applyTransform(transform) {
+        if (rootG) {
+            rootG.setAttribute('transform', `translate(${transform.x},${transform.y}) scale(${transform.scale})`);
+        }
+    }
+
+    function fitToView(rows, cols, cellSize) {
+        const svgEl = document.getElementById(svgId);
+        const containerEl = document.getElementById(containerId);
+        if (!svgEl || !containerEl || !pz) return;
+
+        const cw = containerEl.clientWidth;
+        const ch = containerEl.clientHeight;
+        const mapW = (cols - 1) * cellSize;
+        const mapH = (rows - 1) * cellSize;
+        const padding = 40;
+        const scale = Math.min((cw - padding * 2) / mapW, (ch - padding * 2) / mapH, 2);
+        const tx = (cw - mapW * scale) / 2;
+        const ty = (ch - mapH * scale) / 2;
+        pz.setTransform(tx, ty, scale);
     }
 
     function render(appState) {
         const { grid, rows, cols, cellSize, ramp } = appState;
         const svgEl = document.getElementById(svgId);
-        if (!svgEl || !grid) return;
+        if (!svgEl || !grid || !rootG) return;
 
         const stats = Utils.elevStats(grid);
         if (!stats) return;
 
         const colorRamp = Utils.getRamp(ramp || 'terrain');
-        svgEl.innerHTML = '';
+        rootG.innerHTML = '';
 
         const defs = Utils.svgEl('defs');
         // Define clip-path for rounded corners
         defs.innerHTML = `<clipPath id="dem-clip"><rect width="${(cols - 1) * cellSize}" height="${(rows - 1) * cellSize}" rx="6"/></clipPath>`;
-        svgEl.appendChild(defs);
+        rootG.appendChild(defs);
 
         const g = Utils.svgEl('g');
 
@@ -51,13 +84,6 @@ const DEMRenderer = (() => {
                     width: cellSize + 0.5, height: cellSize + 0.5,
                     fill: color
                 }));
-            }
-        }
-
-        // Overlay elevation contour lines (subtle)
-        for (let r = 0; r < rows; r++) {
-            for (let c = 0; c < cols; c++) {
-                if (grid[r][c] == null) continue;
             }
         }
 
@@ -105,12 +131,15 @@ const DEMRenderer = (() => {
             }
         }
 
-        svgEl.appendChild(g);
+        rootG.appendChild(g);
 
-        // Set viewBox for fit
-        const pad = 10;
-        svgEl.setAttribute('viewBox', `-${pad} -${pad} ${(cols - 1) * cellSize + pad * 2} ${(rows - 1) * cellSize + pad * 2}`);
-        svgEl.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+        // Fix svg display for better interaction
+        const containerEl = document.getElementById(containerId);
+        if (containerEl) {
+            svgEl.style.width = containerEl.clientWidth + 'px';
+            svgEl.style.height = containerEl.clientHeight + 'px';
+            svgEl.setAttribute('viewBox', `0 0 ${containerEl.clientWidth} ${containerEl.clientHeight}`);
+        }
 
         // Render legend
         renderLegend(stats, colorRamp, appState.units || 'm');
@@ -148,5 +177,5 @@ const DEMRenderer = (() => {
     `;
     }
 
-    return { init, render };
+    return { init, render, fitToView };
 })();

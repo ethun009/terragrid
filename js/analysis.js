@@ -6,10 +6,43 @@
 const AnalysisEngine = (() => {
 
     let renderer = { svgId: null, containerId: null };
+    let rootG = null;
+    let pz = null;
 
     function init(svgId, containerId) {
         renderer.svgId = svgId;
         renderer.containerId = containerId;
+        const svgEl = document.getElementById(svgId);
+        if (!svgEl) return;
+
+        svgEl.innerHTML = '';
+        rootG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        rootG.setAttribute('id', 'analysis-root-g');
+        svgEl.appendChild(rootG);
+
+        pz = Utils.createPanZoom(svgEl, applyTransform);
+    }
+
+    function applyTransform(transform) {
+        if (rootG) {
+            rootG.setAttribute('transform', `translate(${transform.x},${transform.y}) scale(${transform.scale})`);
+        }
+    }
+
+    function fitToView(rows, cols, cellSize) {
+        const svgEl = document.getElementById(renderer.svgId);
+        const containerEl = document.getElementById(renderer.containerId);
+        if (!svgEl || !containerEl || !pz) return;
+
+        const cw = containerEl.clientWidth;
+        const ch = containerEl.clientHeight;
+        const mapW = (cols - 1) * cellSize;
+        const mapH = (rows - 1) * cellSize;
+        const padding = 40;
+        const scale = Math.min((cw - padding * 2) / mapW, (ch - padding * 2) / mapH, 2);
+        const tx = (cw - mapW * scale) / 2;
+        const ty = (ch - mapH * scale) / 2;
+        pz.setTransform(tx, ty, scale);
     }
 
     /**
@@ -120,7 +153,7 @@ const AnalysisEngine = (() => {
     function renderSlope(appState) {
         const { grid, rows, cols, cellSize, spacing } = appState;
         const svgEl = document.getElementById(renderer.svgId);
-        if (!svgEl || !grid) return;
+        if (!svgEl || !grid || !rootG) return;
 
         const slopes = computeSlope(grid, rows, cols, spacing);
         const allSlopes = slopes.flat().filter(v => v != null);
@@ -128,7 +161,7 @@ const AnalysisEngine = (() => {
         const maxSlope = Math.max(...allSlopes);
         const meanSlope = allSlopes.reduce((a, b) => a + b, 0) / allSlopes.length;
 
-        svgEl.innerHTML = '';
+        rootG.innerHTML = '';
         const g = Utils.svgEl('g');
 
         // Color ramp for slope: white (flat) → yellow → orange → red (steep)
@@ -159,8 +192,8 @@ const AnalysisEngine = (() => {
                 }
             }
         }
-        svgEl.appendChild(g);
-        fitSVG(svgEl, rows, cols, cellSize);
+        rootG.appendChild(g);
+        updateSVGViewBox(svgEl);
 
         // Update stats
         document.getElementById('slope-max').textContent = maxSlope.toFixed(1) + '%';
@@ -189,10 +222,10 @@ const AnalysisEngine = (() => {
     function renderFlow(appState) {
         const { grid, rows, cols, cellSize, spacing } = appState;
         const svgEl = document.getElementById(renderer.svgId);
-        if (!svgEl || !grid) return;
+        if (!svgEl || !grid || !rootG) return;
 
         const flow = computeFlowDirection(grid, rows, cols, spacing);
-        svgEl.innerHTML = '';
+        rootG.innerHTML = '';
         const g = Utils.svgEl('g');
 
         // Light background
@@ -221,7 +254,7 @@ const AnalysisEngine = (() => {
         defs.innerHTML = `<marker id="flow-arrow" markerWidth="5" markerHeight="5" refX="2.5" refY="2.5" orient="auto">
       <path d="M0,0 L5,2.5 L0,5 Z" fill="rgba(100,200,255,0.8)"/>
     </marker>`;
-        svgEl.appendChild(defs);
+        rootG.appendChild(defs);
 
         const arrowLen = cellSize * 0.4;
         for (let r = 0; r < rows; r++) {
@@ -247,16 +280,16 @@ const AnalysisEngine = (() => {
                 }));
             }
         }
-        svgEl.appendChild(g);
-        fitSVG(svgEl, rows, cols, cellSize);
+        rootG.appendChild(g);
+        updateSVGViewBox(svgEl);
     }
 
     function renderCutFill(appState, datum) {
         const { grid, rows, cols, cellSize, spacing } = appState;
         const svgEl = document.getElementById(renderer.svgId);
-        if (!svgEl || !grid) return;
+        if (!svgEl || !grid || !rootG) return;
 
-        svgEl.innerHTML = '';
+        rootG.innerHTML = '';
         const g = Utils.svgEl('g');
 
         for (let r = 0; r < rows - 1; r++) {
@@ -290,20 +323,21 @@ const AnalysisEngine = (() => {
                 }
             }
         }
-        svgEl.appendChild(g);
-        fitSVG(svgEl, rows, cols, cellSize);
+        rootG.appendChild(g);
+        updateSVGViewBox(svgEl);
 
         const result = computeCutFill(grid, rows, cols, spacing, datum);
         return result;
     }
 
-    function fitSVG(svgEl, rows, cols, cellSize) {
-        const pad = cellSize * 0.5;
-        const W = (cols - 1) * cellSize + pad * 2;
-        const H = (rows - 1) * cellSize + pad * 2;
-        svgEl.setAttribute('viewBox', `-${pad} -${pad} ${W} ${H}`);
-        svgEl.setAttributeNS(null, 'preserveAspectRatio', 'xMidYMid meet');
+    function updateSVGViewBox(svgEl) {
+        const containerEl = document.getElementById(renderer.containerId);
+        if (containerEl) {
+            svgEl.style.width = containerEl.clientWidth + 'px';
+            svgEl.style.height = containerEl.clientHeight + 'px';
+            svgEl.setAttribute('viewBox', `0 0 ${containerEl.clientWidth} ${containerEl.clientHeight}`);
+        }
     }
 
-    return { init, computeSlope, computeFlowDirection, computeCutFill, renderSlope, renderFlow, renderCutFill };
+    return { init, computeSlope, computeFlowDirection, computeCutFill, renderSlope, renderFlow, renderCutFill, fitToView };
 })();

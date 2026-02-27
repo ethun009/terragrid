@@ -1733,7 +1733,7 @@ input.error {
         height: 52vw;
         /* square-ish map on mobile */
         min-height: 200px;
-        max-height: 340px;
+        max-height: 800px;
         flex-shrink: 0;
     }
 
