@@ -39,7 +39,9 @@ const Viewer3D = (() => {
         isPanning: false,
         lastMouse: { x: 0, y: 0 },
         spherical: { theta: Math.PI / 4, phi: Math.PI / 3.5, radius: 3 },
-        panOffset: { x: 0, y: 0 }
+        panOffset: { x: 0, y: 0 },
+        lastTouchDist: 0,
+        lastTouchMid: { x: 0, y: 0 }
     };
 
     function init(cId) {
@@ -230,6 +232,69 @@ const Viewer3D = (() => {
                     orbitState.panOffset.y += dy * 0.005;
                 }
             }
+        });
+
+        // Touch support
+        canvas.addEventListener('touchstart', (e) => {
+            if (isWaterMode && e.touches.length === 1) {
+                dropWaterAtCursor(e.touches[0]);
+                e.preventDefault();
+                return;
+            }
+            if (e.touches.length === 1) {
+                orbitState.isRotating = true;
+                orbitState.isPanning = false;
+                orbitState.lastMouse = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            } else if (e.touches.length === 2) {
+                orbitState.isRotating = false;
+                orbitState.isPanning = true;
+                const dx = e.touches[1].clientX - e.touches[0].clientX;
+                const dy = e.touches[1].clientY - e.touches[0].clientY;
+                orbitState.lastTouchDist = Math.sqrt(dx * dx + dy * dy);
+                orbitState.lastTouchMid = {
+                    x: (e.touches[0].clientX + e.touches[1].clientX) / 2,
+                    y: (e.touches[0].clientY + e.touches[1].clientY) / 2
+                };
+            }
+            e.preventDefault();
+        }, { passive: false });
+
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            if (e.touches.length === 1 && orbitState.isRotating) {
+                const dx = e.touches[0].clientX - orbitState.lastMouse.x;
+                const dy = e.touches[0].clientY - orbitState.lastMouse.y;
+                orbitState.lastMouse = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+
+                orbitState.spherical.theta -= dx * 0.008;
+                orbitState.spherical.phi = Utils.clamp(orbitState.spherical.phi + dy * 0.008, 0.1, Math.PI - 0.1);
+            } else if (e.touches.length === 2 && orbitState.isPanning) {
+                const dx = e.touches[1].clientX - e.touches[0].clientX;
+                const dy = e.touches[1].clientY - e.touches[0].clientY;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+                const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+
+                // Zooming
+                if (orbitState.lastTouchDist > 0) {
+                    const factor = orbitState.lastTouchDist / dist;
+                    orbitState.spherical.radius = Utils.clamp(orbitState.spherical.radius * factor, 0.5, 20);
+                }
+
+                // Panning
+                const pdx = midX - orbitState.lastTouchMid.x;
+                const pdy = midY - orbitState.lastTouchMid.y;
+                orbitState.panOffset.x -= pdx * 0.005;
+                orbitState.panOffset.y += pdy * 0.005;
+
+                orbitState.lastTouchDist = dist;
+                orbitState.lastTouchMid = { x: midX, y: midY };
+            }
+        }, { passive: false });
+
+        canvas.addEventListener('touchend', () => {
+            orbitState.isRotating = false;
+            orbitState.isPanning = false;
         });
 
         canvas.addEventListener('wheel', (e) => {
