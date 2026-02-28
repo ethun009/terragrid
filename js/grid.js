@@ -235,12 +235,19 @@ const GridRenderer = (() => {
 
                 // Elevation value
                 if (toggles.elevValues && val != null) {
+                    const isBS = state.dataType === 'backsight';
                     const ev = Utils.svgEl('text', {
                         class: 'elev-label',
                         x: px, y: py + 14,
                         'text-anchor': 'middle'
                     });
-                    ev.textContent = val.toFixed(3);
+
+                    if (isBS && state.fsGrid && state.fsGrid[r][c] != null) {
+                        ev.textContent = `${state.fsGrid[r][c]}cm / ${val.toFixed(2)}`;
+                        ev.style.fontSize = '8px';
+                    } else {
+                        ev.textContent = val.toFixed(3);
+                    }
                     grp.appendChild(ev);
                 }
             }

@@ -24,6 +24,12 @@
         v3dStaticColor: '#3b82f6',
         ramp: 'terrain',
         currentView: 'spreadsheet',
+        // Backsight Data
+        dataType: 'elevation', // 'elevation' or 'backsight'
+        benchmark: 100,
+        backsight: 1.5,
+        hi: 101.5,
+        fsGrid: null, // Stores raw FS values in cm
         toggles: {
             gridLines: false,
             labels: true,
@@ -79,6 +85,18 @@
             Viewer3D.stopRender();
             showScreen('wizard');
         });
+
+        // Toggle backsight fields
+        document.getElementById('data-input-mode').addEventListener('change', (e) => {
+            const fields = document.getElementById('backsight-fields');
+            fields.classList.toggle('hidden', e.target.value !== 'backsight');
+        });
+
+        // Sync benchmark unit in wizard
+        document.getElementById('grid-units').addEventListener('change', (e) => {
+            const bmUnitLabel = document.querySelector('label[for="survey-bm"] .unit-label');
+            if (bmUnitLabel) bmUnitLabel.textContent = e.target.value;
+        });
     }
 
     function startProject() {
@@ -90,6 +108,11 @@
         const interval = parseFloat(document.getElementById('contour-interval').value) || 1;
         const majorMult = parseInt(document.getElementById('major-interval-mult').value) || 5;
 
+        // Backsight
+        const mode = document.getElementById('data-input-mode').value;
+        const bm = parseFloat(document.getElementById('survey-bm').value) || 100;
+        const bs = parseFloat(document.getElementById('survey-bs').value) || 0;
+
         AppState.projectName = name;
         AppState.rows = Math.max(2, Math.min(30, rows));
         AppState.cols = Math.max(2, Math.min(30, cols));
@@ -97,7 +120,18 @@
         AppState.units = units;
         AppState.contourInterval = interval;
         AppState.majorMultiplier = majorMult;
+
+        AppState.dataType = mode;
+        AppState.benchmark = bm;
+        AppState.backsight = bs;
+        AppState.hi = bm + (bs / 100);
+
         AppState.grid = Array.from({ length: AppState.rows }, () => Array(AppState.cols).fill(null));
+        if (AppState.dataType === 'backsight') {
+            AppState.fsGrid = Array.from({ length: AppState.rows }, () => Array(AppState.cols).fill(null));
+        } else {
+            AppState.fsGrid = null;
+        }
 
         launchApp();
     }
@@ -110,6 +144,7 @@
         AppState.units = 'm';
         AppState.contourInterval = 1;
         AppState.majorMultiplier = 5;
+        AppState.dataType = 'elevation';
         document.getElementById('grid-rows').value = 8;
         document.getElementById('grid-cols').value = 8;
         document.getElementById('proj-name').value = 'Demo Terrain Site';
@@ -125,20 +160,44 @@
         // Update topbar title
         document.getElementById('topbar-project-name').textContent = AppState.projectName;
 
-        // Update unit labels
+        // Set unit labels
         document.querySelectorAll('.unit-label, #sb-unit-label, #datum-unit-label').forEach(el => {
             el.textContent = AppState.units;
         });
+
+        // Toggle SS legend for backsight
+        const ssLegend = document.getElementById('ss-legend');
+        if (ssLegend) {
+            ssLegend.classList.toggle('hidden', AppState.dataType !== 'backsight');
+        }
+
+        // Sync wizard BM unit if visible
+        const bmLabel = document.querySelector('label[for="survey-bm"] .unit-label');
+        if (bmLabel) bmLabel.textContent = AppState.units;
+
 
         // Sync sidebar controls
         document.getElementById('sb-contour-interval').value = AppState.contourInterval;
         document.getElementById('sb-major-mult').value = AppState.majorMultiplier;
 
+        // Sync sidebar backsight stats row
+        const bsRow = document.getElementById('stats-backsight-row');
+        if (bsRow) {
+            bsRow.classList.toggle('hidden', AppState.dataType !== 'backsight');
+            if (AppState.dataType === 'backsight') {
+                document.getElementById('stat-bm').textContent = AppState.benchmark.toFixed(3);
+                document.getElementById('stat-hi').textContent = AppState.hi.toFixed(3);
+            }
+        }
+
         // Init spreadsheet
-        Spreadsheet.init('spreadsheet-container', AppState.rows, AppState.cols, onGridChange);
+        Spreadsheet.init('spreadsheet-container', AppState.rows, AppState.cols, onGridChange, {
+            mode: AppState.dataType,
+            hi: AppState.hi
+        });
 
         if (AppState.grid && AppState.grid.flat().some(v => v != null)) {
-            Spreadsheet.setGrid(AppState.grid);
+            Spreadsheet.setGrid(AppState.grid, AppState.fsGrid);
         }
 
         showScreen('app');
@@ -155,6 +214,7 @@
     // ============================================================
     function onGridChange(newGrid) {
         AppState.grid = newGrid;
+        AppState.fsGrid = Spreadsheet.getFSGrid();
         updateStats();
         // Regenerate contours in background
         regenerateContours();
@@ -202,9 +262,8 @@
             });
         });
 
-        document.getElementById('btn-fill-demo').addEventListener('click', () => {
-            Spreadsheet.fillDemo();
-        });
+        // Demo Picker - Level 1 (Terrain) & Level 2 (Size)
+        setupDemoPicker();
         document.getElementById('btn-clear-data').addEventListener('click', () => {
             if (confirm('Clear all elevation data?')) Spreadsheet.clearAll();
         });
@@ -617,17 +676,22 @@
                 if (data) {
                     const p = data.project;
                     AppState.projectName = p.name || 'Imported Project';
-                    AppState.rows = p.rows;
-                    AppState.cols = p.cols;
-                    AppState.spacing = p.spacing;
-                    AppState.units = p.units;
-                    AppState.contourInterval = p.contourInterval;
-                    AppState.majorMultiplier = p.majorMultiplier;
+                    AppState.rows = p.rows || 6;
+                    AppState.cols = p.cols || 6;
+                    AppState.spacing = p.spacing || 10;
+                    AppState.units = p.units || 'm';
+                    AppState.contourInterval = p.contourInterval || 1;
+                    AppState.majorMultiplier = p.majorMultiplier || 5;
+
+                    AppState.dataType = p.dataType || 'elevation';
+                    AppState.benchmark = p.benchmark || 100;
+                    AppState.backsight = p.backsight || 0;
+                    AppState.hi = p.hi || (AppState.benchmark + (AppState.backsight / 100));
                     AppState.grid = data.grid;
+                    AppState.fsGrid = data.fsGrid || null;
 
                     // Re-launch with imported data
                     launchApp();
-                    Spreadsheet.setGrid(AppState.grid);
                     return;
                 }
             }
@@ -635,6 +699,11 @@
             // Try CSV
             const result = Spreadsheet.importCSV(text);
             if (result) {
+                if (result.mode && result.mode !== AppState.dataType) {
+                    AppState.dataType = result.mode;
+                    // Re-launch to sync UI mode
+                    launchApp();
+                }
                 if (result.rows) {
                     AppState.rows = result.rows;
                     AppState.cols = result.cols;
@@ -664,6 +733,54 @@
             renderAnalysisView();
         }
     });
+
+    function setupDemoPicker() {
+        const pickerBtn = document.getElementById('btn-demo-picker');
+        const pickerMenu = document.getElementById('demo-picker-menu');
+        if (!pickerBtn || !pickerMenu) return;
+
+        const types = ['Hill', 'Ridge', 'Valley', 'Depression', 'Saddle', 'Spur', 'Natural Land'];
+        const sizes = [4, 5, 6, 7, 8];
+
+        pickerMenu.innerHTML = types.map(t => `
+            <div class="demo-type-item" data-type="${t.toLowerCase()}">
+                <span>${t}</span>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                </svg>
+                <div class="demo-size-submenu">
+                    ${sizes.map(s => `<div class="demo-size-item" data-type="${t.toLowerCase()}" data-size="${s}">${s}x${s}</div>`).join('')}
+                </div>
+            </div>
+        `).join('');
+
+        pickerBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            pickerMenu.classList.toggle('hidden');
+        });
+
+        document.addEventListener('click', () => pickerMenu.classList.add('hidden'));
+
+        pickerMenu.addEventListener('click', (e) => {
+            const item = e.target.closest('.demo-size-item');
+            if (item) {
+                const type = item.dataset.type;
+                const size = parseInt(item.dataset.size);
+
+                if (size !== AppState.rows) {
+                    AppState.rows = size;
+                    AppState.cols = size;
+                    // Re-init spreadsheet with correct signature: (containerId, rows, cols, callback, options)
+                    Spreadsheet.init('spreadsheet-container', size, size, onGridChange, {
+                        mode: AppState.dataType,
+                        hi: AppState.hi
+                    });
+                }
+                Spreadsheet.fillDemo(type);
+                pickerMenu.classList.add('hidden');
+            }
+        });
+    }
 
     // ============================================================
     // BOOT

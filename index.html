@@ -109,6 +109,33 @@
                             <div class="step-header">
                                 <div class="step-num">4</div>
                                 <div>
+                                    <div class="step-title">Data Input Mode</div>
+                                    <div class="step-desc">Choose how you enter elevation</div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="data-input-mode">Input Type</label>
+                                <select id="data-input-mode">
+                                    <option value="elevation">Direct Elevation (m/ft)</option>
+                                    <option value="backsight">Backsight Survey (cm)</option>
+                                </select>
+                            </div>
+                            <div id="backsight-fields" class="form-row hidden">
+                                <div class="form-group">
+                                    <label for="survey-bm">Benchmark (BM) <span class="unit-label">m</span></label>
+                                    <input type="number" id="survey-bm" step="0.001" value="100.000" />
+                                </div>
+                                <div class="form-group">
+                                    <label for="survey-bs">Backsight (BS) <span class="unit-bs-label">cm</span></label>
+                                    <input type="number" id="survey-bs" step="0.1" value="150.0" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="wizard-step" data-step="5">
+                            <div class="step-header">
+                                <div class="step-num">5</div>
+                                <div>
                                     <div class="step-title">Contour Settings</div>
                                     <div class="step-desc">Configure contour intervals</div>
                                 </div>
@@ -354,6 +381,11 @@
 
                     <div class="sidebar-section" id="sidebar-stats">
                         <div class="sidebar-title">Terrain Stats</div>
+                        <div id="stats-backsight-row" class="hidden">
+                            <div class="stat-row"><span>Benchmark (BM)</span><strong id="stat-bm">—</strong></div>
+                            <div class="stat-row"><span>Inst. Height (HI)</span><strong id="stat-hi">—</strong></div>
+                            <div class="stat-divider"></div>
+                        </div>
                         <div class="stat-row"><span>Min Elevation</span><strong id="stat-min">—</strong></div>
                         <div class="stat-row"><span>Max Elevation</span><strong id="stat-max">—</strong></div>
                         <div class="stat-row"><span>Mean Elevation</span><strong id="stat-mean">—</strong></div>
@@ -371,12 +403,33 @@
                     <div class="panel-toolbar">
                         <span class="panel-title">Elevation Data Input</span>
                         <div class="toolbar-actions">
-                            <button class="tool-btn" id="btn-fill-demo">Fill Demo Data</button>
+                            <div class="demo-dropdown-container">
+                                <button class="tool-btn" id="btn-demo-picker">
+                                    Fill Demo Data
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2">
+                                        <polyline points="6 9 12 15 18 9"></polyline>
+                                    </svg>
+                                </button>
+                                <div id="demo-picker-menu" class="demo-picker-menu hidden">
+                                    <!-- Populated by JS -->
+                                </div>
+                            </div>
                             <button class="tool-btn" id="btn-clear-data">Clear All</button>
                         </div>
                     </div>
                     <div class="spreadsheet-container" id="spreadsheet-container">
                         <div id="spreadsheet-wrapper"></div>
+                        <div id="ss-legend" class="ss-legend hidden">
+                            <div class="ss-legend-item">
+                                <span class="ss-legend-dot fs"></span>
+                                <span class="ss-legend-text">Foresight (cm)</span>
+                            </div>
+                            <div class="ss-legend-item">
+                                <span class="ss-legend-dot rl"></span>
+                                <span class="ss-legend-text">Elevation RL (m)</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 

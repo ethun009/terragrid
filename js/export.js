@@ -228,8 +228,13 @@ const ExportEngine = (() => {
                 units: appState.units,
                 contourInterval: appState.contourInterval,
                 majorMultiplier: appState.majorMultiplier,
+                dataType: appState.dataType,
+                benchmark: appState.benchmark,
+                backsight: appState.backsight,
+                hi: appState.hi,
             },
             grid: appState.grid,
+            fsGrid: appState.fsGrid,
         };
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
         const link = document.createElement('a');
